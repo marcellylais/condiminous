@@ -1,0 +1,7 @@
+# Ignorar dependências do Python
+venv/
+__pycache__/
+
+# Ignorar dependências do Node.js
+node_modules/
+npm-debug.log
