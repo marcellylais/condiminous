@@ -13,6 +13,14 @@ db_moradores = [
 def listar_moradores():
     return jsonify(db_moradores)
 
+# 1.1 READ (Listar morador por ID)
+@app.route("/moradores/<int:morador_id>", methods=["GET"])
+def obter_morador(morador_id):
+    morador = next((m for m in db_moradores if m["id"] == morador_id), None)
+    if not morador:
+        return jsonify({"erro": "Morador não encontrado."}), 404
+    return jsonify(morador)
+
 # 2. CREATE (Adicionar novo morador)
 @app.route("/moradores", methods=["POST"])
 def criar_morador():
@@ -39,6 +47,19 @@ def deletar_morador(morador_id):
             return jsonify({"mensagem": "Morador removido com sucesso!"})
             
     return jsonify({"erro": "Morador não encontrado."}), 404
+
+# 4. UPDATE (Atualizar morador por ID)
+@app.route("/moradores/<int:morador_id>", methods=["PUT"])
+def atualizar_morador(morador_id):
+    dados = request.get_json()
+    morador = next((m for m in db_moradores if m["id"] == morador_id), None)
+    
+    if not morador:
+        return jsonify({"erro": "Morador não encontrado."}), 404
+    
+    # Atualiza os campos fornecidos
+    morador.update(dados)
+    return jsonify({"mensagem": "Morador atualizado com sucesso!", "morador": morador})
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
