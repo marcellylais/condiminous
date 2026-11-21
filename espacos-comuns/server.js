@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 
         const rota = req.route
             ? `${req.baseUrl}${req.route.path}`
-            : req.path;
+            : "rota_inexistente";
 
         const labels = {
             method: req.method,
