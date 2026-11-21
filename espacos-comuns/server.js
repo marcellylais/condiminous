@@ -2,6 +2,11 @@ const express = require("express");
 const { Pool } = require("pg");
 const client = require("prom-client");
 
+const {
+    publicarEspacoCriado,
+    fecharRabbitMQ
+} = require("./rabbitmq");
+
 const app = express();
 const PORT = Number(process.env.PORT || 8001);
 
@@ -216,10 +221,18 @@ app.post("/espacos", async (req, res) => {
             [nome, capacidade, taxa]
         );
 
+        const espacoCriado = resultado.rows[0];
+
+        const eventoPublicado = await publicarEspacoCriado(
+            espacoCriado
+        );
+
         return res.status(201).json({
             mensagem: "Espaço comum cadastrado com sucesso!",
-            espaco: resultado.rows[0]
+            espaco: espacoCriado,
+            evento_publicado: eventoPublicado
         });
+
     } catch (erro) {
         console.error("Erro ao cadastrar espaço:", erro.message);
 
@@ -327,6 +340,7 @@ async function encerrar() {
     console.log("Encerrando o serviço de espaços...");
 
     servidor.close(async () => {
+        await fecharRabbitMQ();
         await pool.end();
         process.exit(0);
     });

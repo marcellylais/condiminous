@@ -41,6 +41,33 @@ services:
       retries: 10
     networks:
       - condiminous-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "rabbitmq-diagnostics",
+          "-q",
+          "check_port_connectivity"
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+    networks:
+      - condiminous-net
   
   espacos-service:
     build:
@@ -54,8 +81,14 @@ services:
       ESPACOS_DB_NAME: ${ESPACOS_DB_NAME}
       ESPACOS_DB_USER: ${ESPACOS_DB_USER}
       ESPACOS_DB_PASSWORD: ${ESPACOS_DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
     depends_on:
       db-espacos:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test:
@@ -105,6 +138,7 @@ services:
 volumes:
   moradores_data:
   espacos_data:
+  rabbitmq_data:
 
 networks:
   condiminous-net:
