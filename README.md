@@ -43,7 +43,7 @@ flowchart TB
     moradores --> moradoresdb
     espacos --> espacosdb
     espacos -->|publica espaco.criado| rabbit
-    rabbit -->|consome| moradores
+    rabbit -->|consome espaco.criado| consumidor["moradores-consumer<br/>Python"]
     prometheus -.->|coleta /metrics| moradores
     prometheus -.->|coleta /metrics| espacos
     grafana --> prometheus
@@ -52,7 +52,8 @@ flowchart TB
 | Componente | Tecnologia | Responsabilidade |
 |---|---|---|
 | `api-gateway` | NGINX | Ponto único de entrada e roteamento das APIs |
-| `moradores-service` | Python 3.12 + Flask | CRUD de moradores e consumo de eventos |
+| `moradores-service` | Python 3.12 + Flask | CRUD de moradores |
+| `moradores-consumer` | Python + Pika | Consumo assíncrono dos eventos de espaços |
 | `db-moradores` | PostgreSQL 16 | Persistência exclusiva de moradores |
 | `espacos-service` | Node.js 20 + Express | CRUD de espaços comuns e publicação de eventos |
 | `db-espacos` | PostgreSQL 16 | Persistência exclusiva de espaços |
@@ -125,8 +126,7 @@ Acompanhe até todos os contêineres aparecerem como `running` e, quando houver 
 ```bash
 docker compose ps
 ```
-
-Contêineres esperados: `db-moradores`, `db-espacos`, `moradores-service`, `rabbitmq`, `espacos-service`, `api-gateway`, `prometheus` e `grafana`.
+Contêineres esperados: `db-moradores`, `db-espacos`, `moradores-service`, `moradores-consumer`, `rabbitmq`, `espacos-service`, `api-gateway`, `prometheus` e `grafana`.
 
 ### Endereços
 
@@ -340,7 +340,7 @@ Formato da mensagem:
 1. Crie um espaço (passo 2 da validação).
 2. Veja o consumo no log de moradores:
    ```bash
-   docker compose logs -f moradores-service
+   docker compose logs -f moradores-consumer
    ```
 3. No **RabbitMQ Management** (http://localhost:15672), em **Exchanges** e **Queues**, confira a exchange `condiminous.events` e a fila `moradores.espacos`.
 
@@ -359,6 +359,7 @@ condiminous/
 ├── moradores/                  # Microsserviço Python + Flask
 │   ├── main.py
 │   ├── requirements.txt
+│   ├── consumer.py             # Consumo de eventos do RabbitMQ
 │   ├── Dockerfile
 │   └── db/init.sql             # Criação da tabela e dados iniciais
 ├── espacos-comuns/             # Microsserviço Node.js + Express
