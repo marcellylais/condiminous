@@ -44,6 +44,31 @@ services:
       retries: 10
     networks:
       - condiminous-net
+  moradores-service:
+    build:
+      context: ./moradores
+    container_name: moradores-service
+    restart: unless-stopped
+    environment:
+      MORADORES_DB_HOST: db-moradores
+      MORADORES_DB_PORT: "5432"
+      MORADORES_DB_NAME: ${MORADORES_DB_NAME}
+      MORADORES_DB_USER: ${MORADORES_DB_USER}
+      MORADORES_DB_PASSWORD: ${MORADORES_DB_PASSWORD}
+    depends_on:
+      db-moradores:
+        condition: service_healthy
+    ports:
+      # Só para testar agora. Sai quando o NGINX entrar.
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status==200 else 1)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - condiminous-net
 
 volumes:
   moradores_data:
