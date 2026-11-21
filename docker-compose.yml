@@ -9,10 +9,6 @@ services:
     volumes:
       - moradores_data:/var/lib/postgresql/data
       - ./moradores/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      # Só para desenvolvimento local (rodar o serviço fora do Docker).
-      # Remover quando o serviço entrar no compose.
-      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${MORADORES_DB_USER} -d ${MORADORES_DB_NAME}"]
       interval: 5s
@@ -31,9 +27,6 @@ services:
     volumes:
       - espacos_data:/var/lib/postgresql/data
       - ./espacos-comuns/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      # Só para desenvolvimento local. Remover quando o serviço entrar no compose.
-      - "5434:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${ESPACOS_DB_USER} -d ${ESPACOS_DB_NAME}"]
       interval: 5s
@@ -188,8 +181,23 @@ services:
     depends_on:
       - moradores-service
       - espacos-service
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/bin/promtool",
+          "query",
+          "instant",
+          "http://127.0.0.1:9090",
+          "up"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - condiminous-net
+    
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -208,6 +216,16 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://127.0.0.1:3000/api/health || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
     networks:
       - condiminous-net
 
