@@ -69,6 +69,27 @@ def erro_banco(e):
 
 
 # ---------------------------------------------------------------
+# Healthcheck
+# ---------------------------------------------------------------
+@app.route("/health", methods=["GET"])
+def health():
+    try:
+        with conectar() as cur:
+            cur.execute("SELECT 1")
+        return jsonify({
+            "status": "ok",
+            "service": "moradores-service",
+            "database": "connected",
+        }), 200
+    except psycopg2.Error as e:
+        app.logger.error("Falha no healthcheck: %s", e)
+        return jsonify({
+            "status": "error",
+            "service": "moradores-service",
+            "database": "disconnected",
+        }), 503
+
+# ---------------------------------------------------------------
 # CRUD
 # ---------------------------------------------------------------
 @app.route("/moradores", methods=["GET"])
