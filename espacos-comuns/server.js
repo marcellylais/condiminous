@@ -15,6 +15,18 @@ app.get('/espacos', (req, res) => {
     res.json(db_espacos);
 });
 
+// 1.1 READ (Listar espaço por ID)
+app.get('/espacos/:id', (req, res) => {
+    const idEspaco = parseInt(req.params.id);
+    const espaco = db_espacos.find(e => e.id === idEspaco);
+
+    if (!espaco) {
+        return res.status(404).json({ erro: "Espaço comum não encontrado." });
+    }
+
+    res.json(espaco);
+});
+
 // 2. CREATE (Cadastrar novo espaço)
 app.post('/espacos', (req, res) => {
     const { id, nome, capacidade, taxa } = req.body;
@@ -46,6 +58,20 @@ app.delete('/espacos/:id', (req, res) => {
 
     db_espacos.splice(index, 1);
     res.json({ mensagem: "Espaço comum removido com sucesso!" });
+});
+
+// 4. UPDATE (Atualizar todos os campos de um espaço por ID)
+app.put('/espacos/:id', (req, res) => {
+    const idEspaco = parseInt(req.params.id);
+    const { nome, capacidade, taxa } = req.body;
+
+    const index = db_espacos.findIndex(e => e.id === idEspaco);
+    if (index === -1) {
+        return res.status(404).json({ erro: "Espaço comum não encontrado." });
+    }
+
+    db_espacos[index] = { ...db_espacos[index], nome, capacidade, taxa };
+    res.json({ mensagem: "Espaço comum atualizado com sucesso!", espaco: db_espacos[index] });
 });
 
 app.listen(PORT, () => {

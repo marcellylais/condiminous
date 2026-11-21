@@ -1,0 +1,53 @@
+# Etapa atual: apenas os bancos de dados (um por microsserviço).
+# Os serviços, o gateway e a observabilidade entram aqui nas próximas etapas.
+
+services:
+  db-moradores:
+    image: postgres:16-alpine
+    container_name: db-moradores
+    environment:
+      POSTGRES_USER: ${MORADORES_DB_USER}
+      POSTGRES_PASSWORD: ${MORADORES_DB_PASSWORD}
+      POSTGRES_DB: ${MORADORES_DB_NAME}
+    volumes:
+      - moradores_data:/var/lib/postgresql/data
+      - ./moradores/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      # Só para desenvolvimento local (rodar o serviço fora do Docker).
+      # Remover quando o serviço entrar no compose.
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MORADORES_DB_USER} -d ${MORADORES_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - condiminous-net
+
+  db-espacos:
+    image: postgres:16-alpine
+    container_name: db-espacos
+    environment:
+      POSTGRES_USER: ${ESPACOS_DB_USER}
+      POSTGRES_PASSWORD: ${ESPACOS_DB_PASSWORD}
+      POSTGRES_DB: ${ESPACOS_DB_NAME}
+    volumes:
+      - espacos_data:/var/lib/postgresql/data
+      - ./espacos-comuns/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      # Só para desenvolvimento local. Remover quando o serviço entrar no compose.
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ESPACOS_DB_USER} -d ${ESPACOS_DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - condiminous-net
+
+volumes:
+  moradores_data:
+  espacos_data:
+
+networks:
+  condiminous-net:
