@@ -1,10 +1,40 @@
 const express = require("express");
 const { Pool } = require("pg");
+const client = require("prom-client");
 
 const app = express();
 const PORT = Number(process.env.PORT || 8001);
 
 app.use(express.json());
+app.use((req, res, next) => {
+    // A coleta do Prometheus não será contabilizada como tráfego da aplicação.
+    if (req.path === "/metrics") {
+        return next();
+    }
+
+    const inicio = process.hrtime.bigint();
+
+    res.on("finish", () => {
+        const fim = process.hrtime.bigint();
+        const duracao = Number(fim - inicio) / 1_000_000_000;
+
+        const rota = req.route
+            ? `${req.baseUrl}${req.route.path}`
+            : req.path;
+
+        const labels = {
+            method: req.method,
+            route: rota,
+            status: String(res.statusCode),
+            service: "espacos-service"
+        };
+
+        requisicoesHttp.inc(labels);
+        duracaoRequisicoes.observe(labels, duracao);
+    });
+
+    next();
+});
 
 const pool = new Pool({
     host: process.env.ESPACOS_DB_HOST,
@@ -12,6 +42,24 @@ const pool = new Pool({
     database: process.env.ESPACOS_DB_NAME,
     user: process.env.ESPACOS_DB_USER,
     password: process.env.ESPACOS_DB_PASSWORD
+});
+
+// Coleta métricas padrão do processo Node.js, como memória e CPU.
+client.collectDefaultMetrics({
+    prefix: "espacos_"
+});
+
+const requisicoesHttp = new client.Counter({
+    name: "http_requests_total",
+    help: "Total de requisições HTTP recebidas",
+    labelNames: ["method", "route", "status", "service"]
+});
+
+const duracaoRequisicoes = new client.Histogram({
+    name: "http_request_duration_seconds",
+    help: "Duração das requisições HTTP em segundos",
+    labelNames: ["method", "route", "status", "service"],
+    buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5]
 });
 
 function validarEspaco(dados) {
@@ -48,6 +96,19 @@ function validarEspaco(dados) {
         }
     };
 }
+
+app.get("/metrics", async (req, res) => {
+    try {
+        res.set("Content-Type", client.register.contentType);
+        return res.end(await client.register.metrics());
+    } catch (erro) {
+        console.error("Erro ao gerar métricas:", erro.message);
+
+        return res.status(500).json({
+            erro: "Não foi possível gerar as métricas."
+        });
+    }
+});
 
 // Verifica a saúde do serviço e a conexão com o banco.
 app.get("/health", async (req, res) => {
