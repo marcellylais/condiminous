@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS espacos (
     id         SERIAL        PRIMARY KEY,
     nome       VARCHAR(100)  NOT NULL,
     capacidade INTEGER       NOT NULL CHECK (capacidade > 0),
-    taxa       NUMERIC(10,2) NOT NULL DEFAULT 0
+    taxa       NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (taxa >= 0)
 );
 
 -- Dados iniciais (os mesmos que estavam na lista em memória)
