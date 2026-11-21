@@ -64,6 +64,23 @@ services:
     networks:
       - condiminous-net
 
+  moradores-consumer:
+    build:
+      context: ./moradores
+    container_name: moradores-consumer
+    restart: unless-stopped
+    command: ["python", "consumer.py"]
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - condiminous-net
+
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: rabbitmq
