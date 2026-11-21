@@ -332,6 +332,12 @@ app.delete("/espacos/:id", async (req, res) => {
     }
 });
 
+app.use((req, res) => {
+    return res.status(404).json({
+        erro: "Rota não encontrada."
+    });
+});
+
 const servidor = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Servidor de Espaços Comuns rodando na porta ${PORT}`);
 });
