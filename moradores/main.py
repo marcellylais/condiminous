@@ -1,9 +1,12 @@
 import os
+import re
+import time
 from contextlib import contextmanager
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, jsonify, request
+from flask import Flask, Response, g, jsonify, request
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 # ---------------------------------------------------------------
 # Configuração do banco (vem do ambiente; padrões = rodar local)
@@ -31,6 +34,56 @@ def conectar():
 
 app = Flask(__name__)
 app.json.ensure_ascii = False           # devolve "João" em vez de "João"
+
+
+# ---------------------------------------------------------------
+# Métricas (Prometheus) - mesmos nomes e rótulos do espacos-service
+# ---------------------------------------------------------------
+SERVICE_NAME = "moradores-service"
+ROTULOS = ["method", "route", "status", "service"]
+
+REQUISICOES = Counter(
+    "http_requests_total",
+    "Total de requisições HTTP recebidas",
+    ROTULOS,
+)
+DURACAO = Histogram(
+    "http_request_duration_seconds",
+    "Duração das requisições HTTP em segundos",
+    ROTULOS,
+    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+)
+
+
+def rota_atual():
+    """Devolve o MOLDE da rota (/moradores/:id), nunca o caminho real (/moradores/57)."""
+    if request.url_rule is None:
+        return "rota_inexistente"
+    return re.sub(r"<[^>]+>", ":id", request.url_rule.rule)
+
+
+@app.before_request
+def iniciar_cronometro():
+    g.inicio = time.perf_counter()
+
+
+@app.after_request
+def registrar_metricas(response):
+    if request.path != "/metrics" and hasattr(g, "inicio"):
+        rotulos = {
+            "method": request.method,
+            "route": rota_atual(),
+            "status": str(response.status_code),
+            "service": SERVICE_NAME,
+        }
+        REQUISICOES.labels(**rotulos).inc()
+        DURACAO.labels(**rotulos).observe(time.perf_counter() - g.inicio)
+    return response
+
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    return Response(generate_latest(), content_type=CONTENT_TYPE_LATEST)
 
 
 # ---------------------------------------------------------------
@@ -88,6 +141,7 @@ def health():
             "service": "moradores-service",
             "database": "disconnected",
         }), 503
+
 
 # ---------------------------------------------------------------
 # CRUD
