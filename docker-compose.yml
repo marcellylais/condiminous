@@ -143,6 +143,8 @@ services:
     depends_on:
       espacos-service:
         condition: service_healthy
+      moradores-service:
+        condition: service_healthy
     healthcheck:
       test:
         [
