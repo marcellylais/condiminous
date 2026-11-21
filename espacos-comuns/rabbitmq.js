@@ -42,7 +42,7 @@ async function obterCanal() {
         limparConexao();
     });
 
-    canal = await conexao.createChannel();
+    canal = await conexao.createConfirmChannel();
 
     await canal.assertExchange(EXCHANGE, "topic", {
         durable: true
@@ -81,6 +81,8 @@ async function publicarEspacoCriado(espaco) {
                 timestamp: Date.now()
             }
         );
+
+        await canalAtual.waitForConfirms();
 
         if (!publicado) {
             console.warn(
