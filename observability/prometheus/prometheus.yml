@@ -1,0 +1,19 @@
+# Configuração do Prometheus do Condiminous
+global:
+  scrape_interval: 5s       # coleta a cada 5s: o gráfico reage rápido durante a demo
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: moradores-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["moradores-service:8000"]
+        labels:
+          linguagem: python
+
+  - job_name: espacos-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["espacos-service:8001"]
+        labels:
+          linguagem: nodejs
